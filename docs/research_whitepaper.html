@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>抖医 TiktokRx 研究白皮书 — 数据驱动的抖音内容诊断方法论</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<script>
+(function(){
+  var payload=JSON.stringify({path:location.pathname,referrer:document.referrer});
+  if(navigator.sendBeacon){navigator.sendBeacon('/api/visit',new Blob([payload],{type:'application/json'}));return;}
+  fetch('/api/visit',{method:'POST',headers:{'Content-Type':'application/json'},body:payload,keepalive:true}).catch(function(){});
+})();
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--cyan:#25f4ee;--pink:#fe2c55;--cyan-light:#e6fffe;--pink-light:#fff0f3;--ink:#262626;--slate:#666;--muted:#999;--border:#e0e0e0;--bg:#fafafa;--card:#fff}
+html{scroll-behavior:smooth}
+body{font-family:'Inter','Noto Sans SC',-apple-system,sans-serif;background:var(--bg);color:var(--ink);line-height:1.75;overflow-x:hidden}
+
+/* ━━ Launch overlay ━━ */
+#launch-overlay{position:fixed;z-index:9999;background:linear-gradient(135deg,var(--cyan),var(--pink));pointer-events:none;width:0;height:0;top:0;left:0;border-radius:0}
+#launch-overlay.go{transition:top 0.45s cubic-bezier(0.4,0,0,1),left 0.45s cubic-bezier(0.4,0,0,1),width 0.45s cubic-bezier(0.4,0,0,1),height 0.45s cubic-bezier(0.4,0,0,1),border-radius 0.35s ease!important}
+
+/* ━━ Nav ━━ */
+.nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);transition:box-shadow 0.3s}
+.nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,0.06)}
+.nav-in{max-width:960px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:52px;padding:0 1.5rem}
+.nav-logo{font-size:0.95rem;font-weight:800;text-decoration:none;color:var(--ink);letter-spacing:-0.02em}
+.nav-logo span{color:var(--pink)}
+.nav-links a{font-size:0.82rem;color:var(--slate);text-decoration:none;font-weight:500;margin-left:1.5rem;transition:color 0.2s}
+.nav-links a:hover{color:var(--pink)}
+
+/* ━━ Hero ━━ */
+.hero{min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;padding:6rem 1.5rem 4rem;background:linear-gradient(180deg,#fafafa 0%,#fff 50%,#f5f5f5 100%);position:relative}
+.hero-inner{max-width:680px}
+.hero .badge{display:inline-block;padding:0.3rem 1rem;border-radius:100px;background:linear-gradient(135deg,var(--cyan-light),var(--pink-light));color:var(--pink);font-size:0.72rem;font-weight:700;letter-spacing:0.08em;margin-bottom:2rem}
+.hero h1{font-size:clamp(2rem,6vw,3.2rem);font-weight:900;line-height:1.15;letter-spacing:-0.03em;margin-bottom:1rem}
+.hero h1 .cyan{color:var(--cyan)}
+.hero h1 .pink{color:var(--pink)}
+.hero .sub{color:var(--slate);font-size:clamp(0.95rem,2.5vw,1.1rem);margin-bottom:2.5rem;font-weight:400;line-height:1.8}
+.hero .nums{display:flex;justify-content:center;gap:clamp(1rem,4vw,2.5rem);flex-wrap:wrap}
+.num-item{text-align:center}
+.num-item .n{font-size:clamp(1.4rem,4vw,2.2rem);font-weight:900;font-variant-numeric:tabular-nums}
+.num-item .n.cyan{color:var(--cyan)}
+.num-item .n.pink{color:var(--pink)}
+.num-item .l{font-size:0.72rem;color:var(--muted);margin-top:0.15rem}
+
+/* ━━ Sections ━━ */
+section{max-width:960px;margin:0 auto;padding:4rem 1.5rem}
+.sec-tag{font-size:0.65rem;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;color:var(--pink);margin-bottom:0.4rem}
+h2{font-size:clamp(1.4rem,4vw,2rem);font-weight:800;letter-spacing:-0.02em;line-height:1.25;margin-bottom:1rem}
+h3{font-size:1.1rem;font-weight:700;margin:2rem 0 0.8rem}
+p{color:var(--slate);font-size:0.92rem;margin-bottom:0.8rem}
+strong{color:var(--ink)}
+ul{padding-left:1.4rem;margin-bottom:1rem}
+li{font-size:0.92rem;color:var(--slate);margin-bottom:0.3rem}
+
+/* ━━ Dark section ━━ */
+.dark-sec{background:var(--ink);color:#fff;max-width:none;padding:4rem 1.5rem}
+.dark-sec section{max-width:960px;margin:0 auto;padding:0}
+.dark-sec h2,.dark-sec h3{color:#fff}
+.dark-sec p{color:rgba(255,255,255,0.7)}
+.dark-sec .sec-tag{color:var(--cyan)}
+
+/* ━━ Cards ━━ */
+.card-grid{display:grid;gap:1rem;margin:1.5rem 0}
+.card-grid.cols-2{grid-template-columns:repeat(2,1fr)}
+.card-grid.cols-3{grid-template-columns:repeat(3,1fr)}
+.card-grid.cols-4{grid-template-columns:repeat(4,1fr)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;transition:transform 0.2s,box-shadow 0.2s}
+.card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,0.06)}
+.dark-sec .card{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.1)}
+.dark-sec .card:hover{background:rgba(255,255,255,0.1)}
+.card h4{font-size:0.92rem;font-weight:700;margin-bottom:0.4rem}
+.card p{font-size:0.82rem;color:var(--muted);margin:0;line-height:1.6}
+.dark-sec .card h4{color:#fff}
+.dark-sec .card p{color:rgba(255,255,255,0.6)}
+
+/* ━━ Quote ━━ */
+.quote{background:linear-gradient(135deg,var(--cyan-light),var(--pink-light));border-left:3px solid var(--pink);border-radius:0 10px 10px 0;padding:1.2rem 1.5rem;margin:1.5rem 0;font-size:0.92rem;font-weight:500;color:var(--ink);line-height:1.7}
+.dark-sec .quote{background:rgba(255,255,255,0.08);border-left-color:var(--cyan);color:rgba(255,255,255,0.9)}
+
+/* ━━ Table ━━ */
+table{width:100%;border-collapse:separate;border-spacing:0;margin:1rem 0;font-size:0.85rem;background:var(--card);border-radius:12px;overflow:hidden;border:1px solid var(--border)}
+th{background:var(--ink);color:#fff;padding:0.65rem 0.8rem;text-align:left;font-weight:600;font-size:0.75rem;letter-spacing:0.04em}
+td{padding:0.55rem 0.8rem;border-bottom:1px solid var(--border);color:var(--slate)}
+tr:last-child td{border-bottom:none}
+.hi{color:var(--pink);font-weight:700}
+.cyan-hi{color:var(--cyan);font-weight:700}
+
+/* ━━ Code / pre ━━ */
+pre{background:var(--ink);color:#e0e0e0;padding:1.2rem 1.4rem;border-radius:12px;overflow-x:auto;margin:1rem 0;font-size:0.8rem;line-height:1.65;font-family:'SF Mono','Fira Code',monospace}
+
+/* ━━ Timeline ━━ */
+.timeline{position:relative;padding-left:2rem;margin:1.5rem 0}
+.timeline::before{content:'';position:absolute;left:0.6rem;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--cyan),var(--pink))}
+.tl-item{position:relative;margin-bottom:1.5rem}
+.tl-item::before{content:'';position:absolute;left:-1.65rem;top:0.45rem;width:12px;height:12px;border-radius:50%;background:var(--cyan);border:3px solid var(--bg)}
+.tl-item h4{font-size:0.92rem;font-weight:700;margin-bottom:0.2rem}
+.tl-item p{font-size:0.82rem;color:var(--muted);margin:0}
+
+/* ━━ Personas ━━ */
+.persona-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+.persona-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1rem 1.2rem;text-align:center}
+.persona-card .emoji{font-size:1.8rem;margin-bottom:0.4rem}
+.persona-card .name{font-size:0.85rem;font-weight:700;margin-bottom:0.2rem}
+.persona-card .ratio{font-size:0.72rem;color:var(--pink);font-weight:600;margin-bottom:0.3rem}
+.persona-card .desc{font-size:0.75rem;color:var(--muted);line-height:1.5}
+
+/* ━━ Scroll reveal ━━ */
+.rv{opacity:0;transform:translateY(24px);transition:opacity 0.55s ease,transform 0.55s ease}
+.rv.revealed{opacity:1;transform:none}
+
+/* ━━ CTA ━━ */
+.cta-bar{text-align:center;padding:4rem 1.5rem;max-width:960px;margin:0 auto}
+.btn{display:inline-flex;align-items:center;padding:0.8rem 2.2rem;border-radius:12px;font-size:0.95rem;font-weight:700;text-decoration:none;transition:all 0.2s}
+.btn-gradient{background:linear-gradient(135deg,var(--cyan),var(--pink));color:#fff;box-shadow:0 4px 20px rgba(37,244,238,0.3)}
+.btn-gradient:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(37,244,238,0.4)}
+
+/* ━━ Footer ━━ */
+footer{text-align:center;padding:2rem 1.5rem;font-size:0.75rem;color:var(--muted);border-top:1px solid var(--border)}
+footer a{color:var(--pink);text-decoration:none}
+
+@media(max-width:640px){
+  .hero{padding:5rem 1rem 3rem}
+  section{padding:3rem 1rem}
+  .card-grid.cols-2,.card-grid.cols-3,.card-grid.cols-4{grid-template-columns:1fr}
+  .persona-grid{grid-template-columns:repeat(2,1fr)}
+  .nav-links a{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="launch-overlay"></div>
+
+<!-- ━━ Nav ━━ -->
+<nav class="nav" id="topnav">
+  <div class="nav-in">
+    <a href="/" class="nav-logo">抖医<span>TiktokRx</span></a>
+    <div class="nav-links">
+      <a href="/">首页</a>
+      <a href="/app/" onclick="return go(event)">诊断</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ━━ Hero ━━ -->
+<div class="hero">
+  <div class="hero-inner">
+    <div class="badge">RESEARCH WHITEPAPER · v1.0</div>
+    <h1>用<span class="cyan">数据科学</span>拆解<br>抖音的<span class="pink">内容密码</span></h1>
+    <p class="sub">基于多Agent辩论架构的抖音内容AI诊断系统<br>8880+ 条真实数据 · 6 个AI专家 · 三轮辩论 · 六维评分</p>
+    <div class="nums">
+      <div class="num-item"><div class="n cyan" data-c="8880">0</div><div class="l">视频数据</div></div>
+      <div class="num-item"><div class="n pink" data-c="6782">0</div><div class="l">评论数据</div></div>
+      <div class="num-item"><div class="n cyan" data-c="6">0</div><div class="l">AI Agent</div></div>
+      <div class="num-item"><div class="n pink" data-c="3">0</div><div class="l">辩论轮次</div></div>
+      <div class="num-item"><div class="n cyan" data-c="850">0</div><div class="l">BGM知识库</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ━━ About ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">About</div>
+    <h2>不是拍脑袋，是数据说了算</h2>
+  </div>
+  <div class="quote rv">
+    「抖医 TiktokRx 是一个基于真实数据训练的 AI 内容诊断平台。我们采集了 8880+ 条抖音视频、6782 条评论、850 首热门 BGM，用统计回归和 LLM 深度分析构建了品类差异化的评分模型。提交你的内容，6 位 AI 专家会像医生会诊一样，三轮辩论后给出量化诊断报告。」
+  </div>
+  <div class="card-grid cols-3 rv">
+    <div class="card"><h4>📊 双轨分析</h4><p>传统统计（Spearman/回归/聚类）+ LLM 深度分析（多模态视频理解），数据科学与 AI 的深度融合</p></div>
+    <div class="card"><h4>🗣️ 6 Agent 辩论</h4><p>内容/视觉/BGM/增长/用户/裁判——6 位专家并行诊断→交叉质疑→综合裁定，减少单一视角偏差</p></div>
+    <div class="card"><h4>🎯 品类差异化</h4><p>5 大品类（美食/穿搭/科技/旅行/生活）各自独立的评分权重，不存在"一刀切"的内容标准</p></div>
+  </div>
+</section>
+
+<!-- ━━ Research Process ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">Process</div>
+    <h2>研究过程</h2>
+    <p>从数据采集到模型验证，完整的研究方法论。</p>
+  </div>
+  <div class="timeline rv">
+    <div class="tl-item"><h4>Step 1 · 数据采集</h4><p>8880+ 条抖音视频、6782 条评论、850 首 BGM，通过 15+ 平台聚合爬虫完成</p></div>
+    <div class="tl-item"><h4>Step 2 · 统计建模</h4><p>Spearman 相关分析、多元回归、Kruskal-Wallis 检验、K-Means 聚类，发现品类差异化规律</p></div>
+    <div class="tl-item"><h4>Step 3 · LLM 分析</h4><p>MiMo-v2-Omni 视频理解 + MiMo-v2-Pro 内容模式总结 + MiMo-v2-Flash 评论分类</p></div>
+    <div class="tl-item"><h4>Step 4 · 模型构建</h4><p>Model A 六维度评分权重 + BGM 热度模型 + 6 种评论用户画像</p></div>
+    <div class="tl-item"><h4>Step 5 · 系统验证</h4><p>6-Agent 辩论系统验证、品类权重敏感性分析、BGM 推流预测模型测试</p></div>
+  </div>
+</section>
+
+<!-- ━━ Architecture ━━ -->
+<div class="dark-sec">
+  <section>
+    <div class="rv">
+      <div class="sec-tag" style="color:var(--cyan)">Architecture</div>
+      <h2>工作原理：四阶段诊断引擎</h2>
+    </div>
+    <div class="card-grid cols-4 rv">
+      <div class="card">
+        <h4>Stage 1</h4>
+        <p style="color:var(--cyan);font-weight:700;margin-bottom:0.3rem">数据驱动基线</p>
+        <p>8880+ 视频 + 6782 评论 + 850 BGM<br>Spearman · 回归 · 聚类<br>→ 5 品类差异化基线</p>
+      </div>
+      <div class="card">
+        <h4>Stage 2</h4>
+        <p style="color:var(--cyan);font-weight:700;margin-bottom:0.3rem">Model A 智能初评</p>
+        <p>纯数学模型，无 LLM<br><strong style="color:var(--cyan)">&lt; 50ms</strong> 响应时间<br>6 维度即时打分</p>
+      </div>
+      <div class="card">
+        <h4>Stage 3</h4>
+        <p style="color:var(--pink);font-weight:700;margin-bottom:0.3rem">多智能体深度辩论</p>
+        <p>Round 1: 6 Agent 并行<br>Round 2: 交叉质疑<br>Round 3: 裁判综合</p>
+      </div>
+      <div class="card">
+        <h4>Stage 4</h4>
+        <p style="color:var(--pink);font-weight:700;margin-bottom:0.3rem">AI 优化闭环</p>
+        <p>自动生成优化方案<br>即时重新评分<br>最高分方案推荐</p>
+      </div>
+    </div>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.5rem" class="rv">
+      <div class="card" style="flex:1;min-width:180px;text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--cyan)">8880+</div><p>视频数据</p></div>
+      <div class="card" style="flex:1;min-width:180px;text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--pink)">6</div><p>AI Agent</p></div>
+      <div class="card" style="flex:1;min-width:180px;text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--cyan)">3</div><p>辩论轮次</p></div>
+      <div class="card" style="flex:1;min-width:180px;text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--pink)">&lt;50ms</div><p>Model A</p></div>
+      <div class="card" style="flex:1;min-width:180px;text-align:center"><div style="font-size:1.8rem;font-weight:900;color:var(--cyan)">6</div><p>评分维度</p></div>
+    </div>
+  </section>
+</div>
+
+<!-- ━━ Key Findings ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">Findings</div>
+    <h2>我们发现了这些秘密</h2>
+    <p>数据不会说谎——以下是我们从 8880+ 条真实数据中发现的关键规律。</p>
+  </div>
+  <div class="card-grid cols-2 rv">
+    <div class="card"><h4>🎵 BGM 决定美食命运</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">38.3%</div><p>美食品类 BGM 权重高达 38.3%——是穿搭技术表现 (8%) 的 <strong>4.7 倍</strong>。美食创作者：选对 BGM 就成功了一半。</p></div>
+    <div class="card"><h4>👗 穿搭是纯视觉游戏</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">R² = 0.017</div><p>穿搭品类的文本特征仅解释 <strong>1.7%</strong> 的互动差异——标题写再好也没用，封面和视频才是王道。</p></div>
+    <div class="card"><h4>⏰ 黄金发布时间</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">午餐前 / 晚餐前</div><p>美食品类最佳发布时间：午餐前 1 小时（11-12 点）和晚餐前 1 小时（18 点），直击用户饥饿时刻。</p></div>
+    <div class="card"><h4>✈️ 旅行发晚上</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">晚间预热最佳</div><p>旅行品类最佳发布时间为晚间 18-20 点——用户在睡前「云旅行」，互动意愿最高。</p></div>
+    <div class="card"><h4>❗ 感叹号有反效果</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">β = -0.51</div><p>旅行品类感叹号标题反而降低互动——过度营销在某些品类有显著反效果。</p></div>
+    <div class="card"><h4>📝 标题即内容</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">β = 1.0</div><p>生活品类标题长度是最强单一预测因子——用户在标题里就能判断要不要点进去。</p></div>
+    <div class="card"><h4>🎯 科技最均衡</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">六维各 ~20%</div><p>科技品类六维权重最均衡，属于"全能型"品类——每个维度都不能短板。</p></div>
+    <div class="card"><h4>💡 适度优化 > 重度优化</h4><div class="hi" style="font-size:1.3rem;font-weight:900;margin:0.5rem 0">15.7% vs 更低</div><p>"适度优化"的创作者爆款率 (15.7%) 高于"重度优化"——过度包装反而失去真实感。</p></div>
+  </div>
+</section>
+
+<!-- ━━ Category DNA ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">Category DNA</div>
+    <h2>每个品类的 DNA 都不一样</h2>
+    <p>5 大品类的六维权重对比——不存在适用于所有品类的"万能公式"。</p>
+  </div>
+  <div class="card rv" style="overflow-x:auto;padding:0">
+    <table>
+      <tr><th>品类</th><th>核心驱动</th><th>最强维度</th><th>平均互动</th><th>爆款线</th><th>最佳发布时间</th></tr>
+      <tr><td>🍜 美食</td><td>BGM驱动</td><td class="hi">bgm_adaptation 38.3%</td><td>15,234</td><td>89,500</td><td>午餐前/晚餐前</td></tr>
+      <tr><td>👗 穿搭</td><td>视觉驱动</td><td class="hi">visual_performance 30%</td><td>8,921</td><td>52,000</td><td>下班后/睡前</td></tr>
+      <tr><td>💻 科技</td><td>均衡型</td><td>视觉/BGM/技术 各~20%</td><td>12,456</td><td>75,000</td><td>午休/晚间</td></tr>
+      <tr><td>✈️ 旅行</td><td>增长策略</td><td class="hi">growth_strategy 20.1%</td><td>18,762</td><td>95,000</td><td>晚间预热</td></tr>
+      <tr><td>🏠 生活</td><td>用户共鸣</td><td class="hi">user_resonance 18.2%</td><td>9,834</td><td>58,000</td><td>碎片化时间</td></tr>
+    </table>
+  </div>
+  <h3 class="rv">品类权重对比</h3>
+  <div class="card-grid cols-5 rv" style="text-align:center">
+    <div class="card"><h4>🍜 美食</h4>
+      <div style="margin-top:0.5rem;font-size:0.72rem;text-align:left;line-height:1.8">
+        <div>内容 <strong>16.3%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:16.3%;background:var(--cyan);border-radius:3px"></div></div>
+        <div>视觉 <strong>12.8%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:12.8%;background:var(--pink);border-radius:3px"></div></div>
+        <div>BGM <strong>38.3%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:38.3%;background:#f59e0b;border-radius:3px"></div></div>
+        <div>增长 <strong>13.6%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:13.6%;background:#a855f7;border-radius:3px"></div></div>
+        <div>共鸣 <strong>6.4%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:6.4%;background:#22c55e;border-radius:3px"></div></div>
+        <div>技术 <strong>12.8%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:12.8%;background:#06b6d4;border-radius:3px"></div></div>
+      </div>
+    </div>
+    <div class="card"><h4>👗 穿搭</h4>
+      <div style="margin-top:0.5rem;font-size:0.72rem;text-align:left;line-height:1.8">
+        <div>内容 <strong>20%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:20%;background:var(--cyan);border-radius:3px"></div></div>
+        <div>视觉 <strong>30%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:30%;background:var(--pink);border-radius:3px"></div></div>
+        <div>BGM <strong>12%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:12%;background:#f59e0b;border-radius:3px"></div></div>
+        <div>增长 <strong>15%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:15%;background:#a855f7;border-radius:3px"></div></div>
+        <div>共鸣 <strong>10%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:10%;background:#22c55e;border-radius:3px"></div></div>
+        <div>技术 <strong>8%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:8%;background:#06b6d4;border-radius:3px"></div></div>
+      </div>
+    </div>
+    <div class="card"><h4>💻 科技</h4>
+      <div style="margin-top:0.5rem;font-size:0.72rem;text-align:left;line-height:1.8">
+        <div>内容 <strong>10%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:10%;background:var(--cyan);border-radius:3px"></div></div>
+        <div>视觉 <strong>20%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:20%;background:var(--pink);border-radius:3px"></div></div>
+        <div>BGM <strong>20%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:20%;background:#f59e0b;border-radius:3px"></div></div>
+        <div>增长 <strong>19.8%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:19.8%;background:#a855f7;border-radius:3px"></div></div>
+        <div>共鸣 <strong>10%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:10%;background:#22c55e;border-radius:3px"></div></div>
+        <div>技术 <strong>20%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:20%;background:#06b6d4;border-radius:3px"></div></div>
+      </div>
+    </div>
+    <div class="card"><h4>✈️ 旅行</h4>
+      <div style="margin-top:0.5rem;font-size:0.72rem;text-align:left;line-height:1.8">
+        <div>内容 <strong>11.2%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:11.2%;background:var(--cyan);border-radius:3px"></div></div>
+        <div>视觉 <strong>19.5%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:19.5%;background:var(--pink);border-radius:3px"></div></div>
+        <div>BGM <strong>19.5%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:19.5%;background:#f59e0b;border-radius:3px"></div></div>
+        <div>增长 <strong>20.1%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:20.1%;background:#a855f7;border-radius:3px"></div></div>
+        <div>共鸣 <strong>10%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:10%;background:#22c55e;border-radius:3px"></div></div>
+        <div>技术 <strong>19.5%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:19.5%;background:#06b6d4;border-radius:3px"></div></div>
+      </div>
+    </div>
+    <div class="card"><h4>🏠 生活</h4>
+      <div style="margin-top:0.5rem;font-size:0.72rem;text-align:left;line-height:1.8">
+        <div>内容 <strong>18.2%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:18.2%;background:var(--cyan);border-radius:3px"></div></div>
+        <div>视觉 <strong>17.4%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:17.4%;background:var(--pink);border-radius:3px"></div></div>
+        <div>BGM <strong>17.4%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:17.4%;background:#f59e0b;border-radius:3px"></div></div>
+        <div>增长 <strong>20%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:20%;background:#a855f7;border-radius:3px"></div></div>
+        <div>共鸣 <strong>18.2%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:18.2%;background:#22c55e;border-radius:3px"></div></div>
+        <div>技术 <strong>8.7%</strong></div><div style="height:6px;background:#eee;border-radius:3px;margin:2px 0"><div style="height:100%;width:8.7%;background:#06b6d4;border-radius:3px"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━ Agents ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">Multi-Agent</div>
+    <h2>六个AI专家，三轮辩论</h2>
+  </div>
+  <div class="card rv" style="overflow-x:auto;padding:0">
+    <table>
+      <tr><th>Agent</th><th>角色</th><th>专注维度</th><th>核心职责</th></tr>
+      <tr><td>📝 ContentAgent</td><td>内容分析师</td><td>content_quality</td><td>标题钩子、信息密度、文案结构</td></tr>
+      <tr><td>🎨 VisualAgent</td><td>视觉诊断师</td><td>visual_performance</td><td>封面构图、色彩、视觉吸引力</td></tr>
+      <tr><td>🎵 BGMAgent</td><td>BGM策略师</td><td>bgm_adaptation</td><td>音乐热度、节奏匹配、推流加持</td></tr>
+      <tr><td>📈 GrowthAgent</td><td>增长策略师</td><td>growth_strategy</td><td>标签策略、发布时间、流量入口</td></tr>
+      <tr><td>👥 UserSimAgent</td><td>用户模拟器</td><td>user_resonance</td><td>评论区预测、用户情绪、互动引导</td></tr>
+      <tr><td>⚖️ JudgeAgent</td><td>综合裁判</td><td>综合裁定</td><td>综合所有意见，输出最终报告</td></tr>
+    </table>
+  </div>
+  <div class="card rv" style="margin-top:1rem;padding:1rem 1.5rem;background:var(--pink-light);border:1px solid rgba(254,44,85,0.15)">
+    <h4 style="color:var(--pink);margin-bottom:0.3rem">🗣️ 辩论机制</h4>
+    <p style="color:var(--slate);font-size:0.82rem;margin:0;line-height:1.7">
+      <strong>Round 1</strong> — 6 位 Agent 同时独立分析，各自给出评分和诊断意见<br>
+      <strong>Round 2</strong> — 每位 Agent 读取其他人意见，进行质疑、反驳或补充论据<br>
+      <strong>Round 3</strong> — 裁判 Agent 综合所有意见，给出最终评分和优化方案
+    </p>
+  </div>
+</section>
+
+<!-- ━━ Comment Personas ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">Personas</div>
+    <h2>评论区的六种人</h2>
+    <p>基于 6782 条真实评论训练的评论画像引擎——AI 预测你的评论区会有这些人。</p>
+  </div>
+  <div class="persona-grid rv">
+    <div class="persona-card"><div class="emoji">🌱</div><div class="name">种草型</div><div class="ratio">30%</div><div class="desc">推荐、安利、求链接<br>"看起来好好吃！"</div></div>
+    <div class="persona-card"><div class="emoji">💡</div><div class="name">经验型</div><div class="ratio">22%</div><div class="desc">分享自身经历、对比<br>"我上次也去了..."</div></div>
+    <div class="persona-card"><div class="emoji">🤔</div><div class="name">质疑型</div><div class="ratio">18%</div><div class="desc">提出疑问、求证<br>"真的假的？"</div></div>
+    <div class="persona-card"><div class="emoji">👀</div><div class="name">凑热闹型</div><div class="ratio">15%</div><div class="desc">围观、跟风、从众<br>"前排围观"</div></div>
+    <div class="persona-card"><div class="emoji">🆘</div><div class="name">求助型</div><div class="ratio">10%</div><div class="desc">求教程、求方法<br>"怎么做到的？"</div></div>
+    <div class="persona-card"><div class="emoji">😤</div><div class="name">吐槽型</div><div class="ratio">5%</div><div class="desc">吐槽、批评<br>"就这？"</div></div>
+  </div>
+</section>
+
+<!-- ━━ BGM Heat ━━ -->
+<div class="dark-sec">
+  <section>
+    <div class="rv">
+      <div class="sec-tag" style="color:var(--cyan)">BGM Model</div>
+      <h2>BGM 热度等级</h2>
+      <p>基于 850 首热门 BGM 数据，划分为 5 个热度等级，直接影响推流加持。</p>
+    </div>
+    <div class="card rv" style="overflow-x:auto;padding:0">
+      <table>
+        <tr><th>等级</th><th>阈值</th><th>流量加持</th><th>说明</th></tr>
+        <tr><td class="cyan-hi">S+</td><td>100万+ 播放</td><td style="color:var(--cyan);font-weight:700">+30%</td><td style="color:rgba(255,255,255,0.6)">顶流 BGM，自带流量</td></tr>
+        <tr><td class="cyan-hi">S</td><td>50-100万</td><td style="color:var(--cyan);font-weight:700">+20%</td><td style="color:rgba(255,255,255,0.6)">热门 BGM，高曝光</td></tr>
+        <tr><td>A</td><td>10-50万</td><td style="font-weight:600">+15%</td><td style="color:rgba(255,255,255,0.6)">上升期 BGM</td></tr>
+        <tr><td>B</td><td>1-10万</td><td style="font-weight:600">+5%</td><td style="color:rgba(255,255,255,0.6)">普通 BGM</td></tr>
+        <tr><td>C</td><td>&lt;1万</td><td>0%</td><td style="color:rgba(255,255,255,0.6)">冷门 BGM</td></tr>
+      </table>
+    </div>
+  </section>
+</div>
+
+<!-- ━━ Tech Stack ━━ -->
+<section>
+  <div class="rv">
+    <div class="sec-tag">Technology</div>
+    <h2>技术架构</h2>
+  </div>
+  <div class="card-grid cols-4 rv">
+    <div class="card" style="text-align:center"><h4>前端</h4><p>React 19<br>TypeScript<br>MUI v9<br>Framer Motion<br>ECharts</p></div>
+    <div class="card" style="text-align:center"><h4>后端</h4><p>FastAPI<br>asyncio<br>SSE 流式推送<br>SQLite<br>Playwright</p></div>
+    <div class="card" style="text-align:center"><h4>AI 模型</h4><p>MiMo-v2-Pro<br>MiMo-v2-Omni<br>MiMo-v2-Flash<br>OpenAI 兼容 API</p></div>
+    <div class="card" style="text-align:center"><h4>数据科学</h4><p>scikit-learn<br>scipy<br>jieba<br>OpenCV<br>Whisper STT</p></div>
+  </div>
+  <h3 class="rv">模型层级</h3>
+  <div class="card rv" style="overflow-x:auto;padding:0">
+    <table>
+      <tr><th>层级</th><th>模型</th><th>用途</th><th>特点</th></tr>
+      <tr><td>快速层</td><td>MiMo-v2-Flash</td><td>评论生成、快速任务</td><td>低延迟、低成本</td></tr>
+      <tr><td>专业层</td><td>MiMo-v2-Pro</td><td>Agent 诊断、辩论、裁判</td><td>1M 上下文窗口</td></tr>
+      <tr><td>多模态层</td><td>MiMo-v2-Omni</td><td>图像/视频分析、OCR</td><td>视觉+语言理解</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ━━ Data Source ━━ -->
+<section style="background:#fff;max-width:none;padding:4rem 1.5rem">
+  <div style="max-width:960px;margin:0 auto">
+    <div class="rv">
+      <div class="sec-tag">Data & Methodology</div>
+      <h2>数据来源与工作量</h2>
+    </div>
+    <div class="card-grid cols-2 rv">
+      <div class="card rv">
+        <h4>📊 数据采集</h4>
+        <p style="margin:0.5rem 0"><strong>8880+</strong> 条真实抖音视频（5 品类差异化采集）</p>
+        <p style="margin:0.5rem 0"><strong>6782</strong> 条评论（6 种用户画像标注）</p>
+        <p style="margin:0.5rem 0"><strong>850</strong> 首热门 BGM（15+ 平台聚合）</p>
+        <p style="margin:0.5rem 0"><strong>534</strong> 标题样本（钩子模式标注）</p>
+        <p style="margin:0.5rem 0"><strong>2502</strong> 评论样本（类型/情感标注）</p>
+      </div>
+      <div class="card rv">
+        <h4>⚙️ 工程量</h4>
+        <p style="margin:0.5rem 0">7 种统计方法 × 5 品类 = <strong>35 组分析</strong></p>
+        <p style="margin:0.5rem 0">6 个 AI Agent 三轮辩论</p>
+        <p style="margin:0.5rem 0">15+ 平台 BGM 聚合爬虫</p>
+        <p style="margin:0.5rem 0">14 张数据库表 + 全文索引</p>
+        <p style="margin:0.5rem 0">5 品类独立回归系数 × 6 维度</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ━━ Data Source Declaration ━━ -->
+<section>
+  <div class="quote rv">
+    <strong>数据来源声明</strong>：所有数据通过公开渠道采集，仅用于研究目的。数据已脱敏处理，不包含任何个人隐私信息。视频数据、评论数据、BGM数据均来源于公开渠道，分析方法遵循统计学研究规范。
+  </div>
+</section>
+
+<!-- ━━ CTA ━━ -->
+<div class="cta-bar rv">
+  <a class="btn btn-gradient" href="/app/" onclick="return go(event)" style="font-size:1.1rem;padding:1rem 2.5rem">立即体验 AI 诊断</a>
+  <p style="margin-top:1rem;font-size:0.78rem;color:var(--muted)">抖医 TiktokRx — 用数据科学拆解抖音的内容密码</p>
+</div>
+
+<footer>
+  <p style="margin-bottom:0.5rem">&copy; 2026 抖医 TiktokRx</p>
+  <p><a href="/">首页</a> · <a href="/app/" onclick="return go(event)">诊断</a> · <a href="/privacy">隐私政策</a> · <a href="/terms">服务条款</a></p>
+</footer>
+
+<script>
+// Launch transition
+function go(e){
+  e.preventDefault();
+  var btn=e.currentTarget;
+  var r=btn.getBoundingClientRect();
+  var o=document.getElementById('launch-overlay');
+  o.style.transition='none';
+  o.style.top=r.top+'px';
+  o.style.left=r.left+'px';
+  o.style.width=r.width+'px';
+  o.style.height=r.height+'px';
+  o.style.borderRadius=getComputedStyle(btn).borderRadius||'10px';
+  o.style.pointerEvents='all';
+  void o.offsetWidth;
+  o.style.transition='top 0.45s cubic-bezier(0.4,0,0,1),left 0.45s cubic-bezier(0.4,0,0,1),width 0.45s cubic-bezier(0.4,0,0,1),height 0.45s cubic-bezier(0.4,0,0,1),border-radius 0.35s ease';
+  o.style.top='0px';
+  o.style.left='0px';
+  o.style.width='100vw';
+  o.style.height='100vh';
+  o.style.borderRadius='0';
+  o.classList.add('go');
+  setTimeout(function(){window.location.href='/app'},850);
+  return false;
+}
+
+// Counter animation
+var counted=false;
+function counters(){
+  if(counted)return;counted=true;
+  document.querySelectorAll('[data-c]').forEach(function(el){
+    var t=+el.dataset.c,d=1500,s=performance.now();
+    (function u(n){var p=Math.min((n-s)/d,1),e=1-Math.pow(1-p,3);el.textContent=Math.round(t*e).toLocaleString();if(p<1)requestAnimationFrame(u)})(s);
+  });
+}
+
+// Scroll reveal
+var obs=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('revealed');obs.unobserve(e.target)}})},{threshold:0.1,rootMargin:'0px 0px -40px 0px'});
+document.querySelectorAll('.rv').forEach(function(el){obs.observe(el)});
+
+// Counter on hero visible
+new IntersectionObserver(function(es){if(es[0].isIntersecting)counters()},{threshold:0.3}).observe(document.querySelector('.hero'));
+
+// Nav scroll shadow
+window.addEventListener('scroll',function(){
+  document.getElementById('topnav').classList.toggle('scrolled',window.scrollY>20);
+});
+
+// Reset launch overlay
+window.addEventListener('pageshow',function(e){
+  var o=document.getElementById('launch-overlay');
+  if(!o)return;
+  o.style.transition='none';
+  o.style.width='0';o.style.height='0';
+  o.style.top='0';o.style.left='0';
+  o.style.pointerEvents='none';
+  o.classList.remove('go');
+});
+</script>
+</body>
+</html>

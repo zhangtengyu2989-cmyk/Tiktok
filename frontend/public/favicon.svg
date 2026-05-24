@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#25f4ee;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fe2c55;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ffffff;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fafafa;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#25f4ee;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#fe2c55;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fe2c55;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bgGrad)"/>
+  <rect x="1.5" y="1.5" width="61" height="61" rx="12.5" fill="none" stroke="url(#accentGrad)" stroke-width="2.5"/>
+  <text x="32" y="43" text-anchor="middle" font-family="'Noto Sans SC', 'PingFang SC', sans-serif" font-size="28" font-weight="900" fill="url(#textGrad)">抖医</text>
+</svg>

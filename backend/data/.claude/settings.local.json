@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python -c \"from playwright.sync_api import sync_playwright; print\\('Playwright OK'\\)\")",
+      "WebFetch(domain:github.com)",
+      "Bash(netstat -ano)",
+      "Bash(tasklist)",
+      "Bash(taskkill //F //PID 46316)",
+      "Bash(timeout 300 python -c ' *)"
+    ]
+  }
+}
